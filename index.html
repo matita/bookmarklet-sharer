@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookmarklet sharer</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    main {
+      padding: 1rem;
+      margin: 0 auto;
+      max-width: 800px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      /* a good looking label */
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    #bookmarklet-container {
+      text-align: center;
+    }
+    #bookmarklet {
+      margin: 0 auto;
+      cursor: grab;
+      display: inline-block;
+      /* a good looking button */
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+    #bookmarklet:active {
+      cursor: grabbing;
+    }
+    .shake {
+      animation: shake 0.2s;
+    }
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+
+    #title {
+      /* a good looking input */
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #code {
+      /* a good looking textarea */
+      width: 100%;
+      height: 300px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-family: monospace;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div id="bookmarklet-container">
+      <p id="bookmarklet-instructions">
+        Drag the following link to your bookmarks bar:
+      </p>
+      <p>
+        <a href="#" id="bookmarklet">Bookmarklet</a>
+      </p>
+    </div>
+
+    <p>
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Title">
+    </p>
+    <p>
+      <label for="code">Code</label>
+      <textarea id="code"></textarea>
+    </p>
+  </main>
+
+  <script>
+    const DOCUMENT_TITLE = document.title;
+    
+    function shake(element) {
+      element.classList.add('shake');
+      element.addEventListener('animationend', () => {
+        element.classList.remove('shake');
+      }, { once: true });
+    }
+
+    function minifyCode(code) {
+      return code
+        .replace(/(\s|\n|\r)+/g, ' ')
+        .trim();
+    }
+
+    ;(function() {
+      const fragment = location.hash.slice(1); // #title=some%20title&code=const%20title%20%3D%20fr
+      const params = new URLSearchParams(fragment);
+      const title = params.get('title');
+      const code = decodeURIComponent(params.get('code'));
+
+      const titleElement = document.querySelector('#title');
+      const codeElement = document.querySelector('#code');
+      const bookmarkletLink = document.querySelector('#bookmarklet');
+      
+      titleElement.value = title;
+      codeElement.value = code;
+      update();
+
+      bookmarkletLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        // shake(bookmarkletLink);
+        shake(document.querySelector('#bookmarklet-instructions'));
+      });
+
+      titleElement.addEventListener('input', update);
+      codeElement.addEventListener('input', update);
+
+      function update() {
+        const title = titleElement.value;
+        const code = codeElement.value;
+
+        if (title) {
+          document.title = `${title} • ${DOCUMENT_TITLE}`;
+        }
+
+        bookmarkletLink.textContent = title;
+        bookmarkletLink.href = `javascript:(function() {
+          ${minifyCode(code)}
+        })();`;
+
+        const newParams = new URLSearchParams();
+        newParams.set('title', title);
+        newParams.set('code', encodeURIComponent(code));
+        location.hash = newParams.toString();
+      }
+    })();
+  </script>
+</body>
+</html>
